@@ -22,8 +22,11 @@ jobs:
       - name: Lint (ruff)
         run: ruff check src/ tests/
 
-      - name: Test (pytest)
-        run: pytest tests/ -v
+      - name: Type check (mypy)
+        run: mypy src/
+
+      - name: Test + coverage (pytest)
+        run: pytest tests/ -v --cov=hermes_workspace --cov-report=term --cov-fail-under=80
 
       - name: Notify Feishu (pass)
         if: success()
