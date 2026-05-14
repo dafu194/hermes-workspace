@@ -1,0 +1,54 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  lint-and-test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install dependencies
+        run: pip install ".[dev]"
+
+      - name: Lint (ruff)
+        run: ruff check src/ tests/
+
+      - name: Test (pytest)
+        run: pytest tests/ -v
+
+      - name: Notify Feishu (pass)
+        if: success()
+        env:
+          FEISHU_APP_ID: ${{ secrets.FEISHU_APP_ID }}
+          FEISHU_APP_SECRET: ${{ secrets.FEISHU_APP_SECRET }}
+          REPO_NAME: ${{ github.repository }}
+          COMMIT_SHA: ${{ github.sha }}
+        run: |
+          python3 .github/scripts/feishu_notify.py \
+            --status pass \
+            --repo "${REPO_NAME}" \
+            --commit "${COMMIT_SHA}" \
+            --message "Lint 通过 · 测试全部通过 ✅"
+
+      - name: Notify Feishu (fail)
+        if: failure()
+        env:
+          FEISHU_APP_ID: ${{ secrets.FEISHU_APP_ID }}
+          FEISHU_APP_SECRET: ${{ secrets.FEISHU_APP_SECRET }}
+          REPO_NAME: ${{ github.repository }}
+          COMMIT_SHA: ${{ github.sha }}
+        run: |
+          python3 .github/scripts/feishu_notify.py \
+            --status fail \
+            --repo "${REPO_NAME}" \
+            --commit "${COMMIT_SHA}" \
+            --message "Lint 或测试失败，请检查 Actions 日志 🔴"
